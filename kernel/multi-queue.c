@@ -27,16 +27,21 @@ popMlfq(struct mlfq *head)
     }
 
     if (head->queue[q]->tail == head->queue[q]->head) {
-      struct proc *ret_proc = head->queue[q]->head->data;
-      head->queue[q]->tail = NULL;
+      struct Node *ret_node = head->queue[q]->head;
+      struct proc *ret_proc = ret_node->data;
+
       head->queue[q]->head = NULL;
-      kfree(head->queue[q]->head);
+      head->queue[q]->tail = NULL;
+
+      kfree(ret_node);
+
       return ret_proc;
     }
 
+    struct Node *ret_node = head->queue[q]->head;
     struct proc *ret_proc = head->queue[q]->head->data;
     head->queue[q]->head = head->queue[q]->head->back;
-    kfree(head->queue[q]->head);
+    kfree(ret_node);
     return ret_proc;
   }
   return NULL;
