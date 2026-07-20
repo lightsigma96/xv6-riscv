@@ -1,7 +1,7 @@
-#include "types.h"
+// #include "types.h"
 #include "param.h"
 #include "memlayout.h"
-#include "riscv.h"
+// #include "riscv.h"
 #include "defs.h"
 
 volatile static int started = 0;
@@ -16,17 +16,17 @@ main()
     printk("\n");
     printk("xv6 kernel is booting\n");
     printk("\n");
-    kinit();            // physical page allocator
-    kvminit();          // create kernel page table
-    kvminithart();      // turn on paging
-    procinit();         // process table
-    trapinit();         // trap vectors
-    trapinithart();     // install kernel trap vector
-    plicinit();         // set up interrupt controller
-    plicinithart();     // ask PLIC for device interrupts
-    binit();            // buffer cache
-    iinit();            // inode table
-    fileinit();         // file table
+    kinit();        // physical page allocator
+    kvminit();      // create kernel page table
+    kvminithart();  // turn on paging
+    procinit();     // initialize the proc table & muti-level feedback queue.
+    trapinit();     // trap vectors
+    trapinithart(); // install kernel trap vector
+    plicinit();     // set up interrupt controller
+    plicinithart(); // ask PLIC for device interrupts
+    binit();        // buffer cache
+    iinit();        // inode table
+    fileinit();     // file table
     virtio_disk_init(); // emulated hard disk
     userinit();         // first user process
     __atomic_thread_fence(__ATOMIC_SEQ_CST);
@@ -42,4 +42,5 @@ main()
   }
 
   scheduler();
+  // free mlfq
 }

@@ -1,3 +1,4 @@
+#include "multi-queue.h"
 #include "types.h"
 #include "param.h"
 #include "memlayout.h"
@@ -10,6 +11,7 @@ struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];
 
+struct mlfq *head;
 struct proc *initproc;
 
 int nextpid = 1;
@@ -43,10 +45,11 @@ proc_mapstacks(pagetable_t kpgtbl)
   }
 }
 
-// initialize the proc table.
+// initialize the proc table & muti-level feedback queue.
 void
 procinit(void)
 {
+  allocateMlfq(&head);
   struct proc *p;
 
   initlock(&pid_lock, "nextpid");
@@ -227,6 +230,7 @@ userinit(void)
   p->cwd = namei("/");
 
   p->state = RUNNABLE;
+  insertMlfq(head, p);
 
   release(&p->lock);
 }
@@ -300,6 +304,7 @@ kfork(void)
 
   acquire(&np->lock);
   np->state = RUNNABLE;
+  insertMlfq(head, p);
   release(&np->lock);
 
   return pid;
@@ -437,25 +442,32 @@ scheduler(void)
     intr_on();
     intr_off();
 
-    int found = 0;
-    for (p = proc; p < &proc[NPROC]; p++) {
-      acquire(&p->lock);
-      if (p->state == RUNNABLE) {
-        // Switch to chosen process.  It is the process's job
-        // to release its lock and then reacquire it
-        // before jumping back to us.
-        p->state = RUNNING;
-        c->proc = p;
-        swtch(&c->context, &p->context);
+    uint8 found = 0;
+    p = popMlfq(head);
 
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
-        c->proc = 0;
-        found = 1;
-      }
-      release(&p->lock);
+    if (!p) {
+      asm volatile("wfi");
+      continue;
     }
-    if (found == 0) {
+
+    acquire(&p->lock);
+    if (p->state == RUNNABLE) {
+      // Switch to chosen process.  It is the process's job
+      // to release its lock and then reacquire it
+      // before jumping back to us.
+      p->state = RUNNING;
+      c->proc = p;
+      swtch(&c->context, &p->context);
+
+      // Process is done running for now.
+      // It should have changed its p->state before coming back.
+      c->proc = 0;
+      found = 1;
+    }
+    release(&p->lock);
+
+    // Won't be needing this as there will be only one core
+    if (!found) {
       // nothing to run; stop running on this core until an interrupt.
       asm volatile("wfi");
     }
@@ -580,6 +592,7 @@ wakeup(void *chan)
       acquire(&p->lock);
       if (p->state == SLEEPING && p->chan == chan) {
         p->state = RUNNABLE;
+        insertMlfq(head, p);
       }
       release(&p->lock);
     }

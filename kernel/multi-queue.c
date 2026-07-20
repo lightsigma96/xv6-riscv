@@ -1,8 +1,9 @@
 #include "multi-queue.h"
 
+uint8 allotment_ms_arr[MAX_QUEUES] = {1, 2, 3, 4, 5};
+
 void
-allocateMlfq(const uint8 *__restrict allotment_ms_arr,
-             struct mlfq **__restrict head)
+allocateMlfq(struct mlfq **__restrict head)
 {
   if ((*head = (struct mlfq *)kalloc()) == 0) {
     panic("MLFQ Allocation");

@@ -4,13 +4,13 @@
 /* This architecture can be improved by using single block of memory which improves cache affinity
 and reduces free complexity. */
 
-// remove these as include in main file
 #include "proc.h"
 #include "defs.h"
 #include "types.h"
 
 #define MAX_QUEUES 5
 
+extern uint8 allotment_ms_arr[MAX_QUEUES];
 struct Node {
   struct proc *data;
   struct Node *back; // as we are picking from front
@@ -29,12 +29,12 @@ struct mlfq {
 };
 
 /* Allocates Mlfq with allotment_ms per queue*/
-void allocateMlfq(const uint8 *__restrict allotment_ms_arr,
-                  struct mlfq **__restrict head);
+void allocateMlfq(struct mlfq **__restrict head);
 
 void insertMlfq(struct mlfq *head, struct proc *enter_proc);
 
-/* Pops and return a process, starting from first queue to last*/
+/* Pops and return a process, starting from first queue to last
+ * Returns NULL if none found*/
 struct proc *popMlfq(struct mlfq *head);
 
 /* Free multi-queue */
