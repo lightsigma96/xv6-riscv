@@ -1,6 +1,7 @@
 #include "multi-queue.h"
+#include "defs.h"
 
-uint8 allotment_ms_arr[MAX_QUEUES] = {1, 2, 3, 4, 5};
+uint8 allotment_ms_arr[MAX_QUEUES] = {10, 20, 30, 40, 50};
 
 void
 allocateMlfq(struct mlfq **__restrict head)
@@ -43,6 +44,7 @@ popMlfq(struct mlfq *head)
     struct proc *ret_proc = head->queue[q]->head->data;
     head->queue[q]->head = head->queue[q]->head->back;
     kfree(ret_node);
+
     return ret_proc;
   }
   return NULL;
@@ -51,14 +53,18 @@ popMlfq(struct mlfq *head)
 void
 insertMlfq(struct mlfq *head, struct proc *enter_proc)
 {
-  if (!head->queue[0]->tail) {
+  if (enter_proc->queue_no > MAX_QUEUES) {
+    panic("queue number greater than expected");
+  }
+
+  if (!head->queue[enter_proc->queue_no]->tail) {
     struct Node *first_node = (struct Node *)
       kalloc(); // kalloc returns 4096 bytes of memory, not that much is needed for 1 node, take raw mem needed for node.
 
     first_node->data = enter_proc;
     first_node->back = NULL;
-    head->queue[0]->tail = first_node;
-    head->queue[0]->head = first_node;
+    head->queue[enter_proc->queue_no]->tail = first_node;
+    head->queue[enter_proc->queue_no]->head = first_node;
 
     return; // some status
   }
@@ -68,9 +74,9 @@ insertMlfq(struct mlfq *head, struct proc *enter_proc)
   node->data = enter_proc;
   node->back = NULL;
 
-  head->queue[0]->tail->back = node;
-  head->queue[0]->tail = node;
-  head->queue[0]->tail->back = NULL;
+  head->queue[enter_proc->queue_no]->tail->back = node;
+  head->queue[enter_proc->queue_no]->tail = node;
+  head->queue[enter_proc->queue_no]->tail->back = NULL;
 }
 
 void

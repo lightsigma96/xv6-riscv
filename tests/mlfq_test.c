@@ -5,9 +5,8 @@
 int
 main(void)
 {
-  uint8 allotment_ms_arr[MAX_QUEUES] = {1, 2, 4, 8, 16};
   struct mlfq *mlfq_head = (struct mlfq *)kalloc();
-  allocateMlfq(allotment_ms_arr, &mlfq_head);
+  allocateMlfq(&mlfq_head);
 
   /*----------------------------------------------------------*/
   /* Empty Queue Test                                         */
@@ -22,7 +21,7 @@ main(void)
   /* Single Insert / Pop Test                                 */
   /*----------------------------------------------------------*/
 
-  struct proc p;
+  struct proc p = {0};
 
   insertMlfq(mlfq_head, &p);
 
@@ -37,7 +36,7 @@ main(void)
   /* Priority Test                                            */
   /*----------------------------------------------------------*/
 
-  struct proc p1, p2, p3, p4;
+  struct proc p1, p2, p3, p4 = {0};
 
   struct Node *n1 = (struct Node *)kalloc();
   struct Node *n2 = (struct Node *)kalloc();
@@ -81,6 +80,23 @@ main(void)
   }
 
   printf("[PASS] PRIORITY TEST\n");
+
+  /*----------------------------------------------------------*/
+  /* Demotion Test with Time (One Time)                       */
+  /*----------------------------------------------------------*/
+
+  struct proc demote_proc = {0};
+  demote_proc.at_tick = 0;
+  uint test_ticks = 15;
+
+  insertMlfq(mlfq_head, &demote_proc);
+  demote_proc = *popMlfq(mlfq_head);
+
+  if (demote_proc.queue_no != 1) {
+    printf("[FAIL] Demote One Time, queue no: %d", demote_proc.queue_no);
+    return 1;
+  }
+  printf("[PASS] Demote One Time");
 
   freeMlfq(mlfq_head);
 

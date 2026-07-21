@@ -19,7 +19,6 @@ struct Node {
 struct queue {
   struct Node *head;
   struct Node *tail;
-  uint8 node_count; // not needed for now but maybe later
 };
 
 /*Multi-Level Feedback queue*/

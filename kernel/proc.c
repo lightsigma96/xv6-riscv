@@ -304,6 +304,7 @@ kfork(void)
 
   acquire(&np->lock);
   np->state = RUNNABLE;
+  insertMlfq(head, np);
   insertMlfq(head, p);
   release(&np->lock);
 
@@ -457,6 +458,11 @@ scheduler(void)
       // before jumping back to us.
       p->state = RUNNING;
       c->proc = p;
+
+      acquire(&tickslock);
+      p->at_tick = ticks;
+      release(&tickslock);
+
       swtch(&c->context, &p->context);
 
       // Process is done running for now.
@@ -508,6 +514,19 @@ yield(void)
   struct proc *p = myproc();
   acquire(&p->lock);
   p->state = RUNNABLE;
+  acquire(&tickslock);
+
+#ifdef TEST_VALUE
+  extern uint test_ticks;
+  if (test_ticks - p->at_tick >= allotment_ms_arr[p->queue_no])
+    p->queue_no += 1;
+#endif
+
+  if (ticks - p->at_tick >= allotment_ms_arr[p->queue_no])
+    p->queue_no += 1;
+
+  insertMlfq(head, p);
+  release(&tickslock);
   sched();
   release(&p->lock);
 }
@@ -614,6 +633,7 @@ kkill(int pid)
       if (p->state == SLEEPING) {
         // Wake process from sleep().
         p->state = RUNNABLE;
+        insertMlfq(head, p);
       }
       release(&p->lock);
       return 0;
