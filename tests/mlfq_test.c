@@ -85,18 +85,45 @@ main(void)
   /* Demotion Test with Time (One Time)                       */
   /*----------------------------------------------------------*/
 
-  struct proc demote_proc = {0};
-  demote_proc.at_tick = 0;
-  uint test_ticks = 15;
+  uint d_test_ticks = 15;
+  struct proc *demote_proc;
+  demote_proc->at_tick = 0;
+  demote_proc->queue_no = 0;
 
-  insertMlfq(mlfq_head, &demote_proc);
-  demote_proc = *popMlfq(mlfq_head);
+  insertMlfq(mlfq_head, demote_proc);
+  demote_proc = popMlfq(mlfq_head);
 
-  if (demote_proc.queue_no != 1) {
-    printf("[FAIL] Demote One Time, queue no: %d", demote_proc.queue_no);
+  if (demote_proc->queue_no < MAX_QUEUES - 1 &&
+      d_test_ticks - demote_proc->at_tick >=
+        allotment_ms_arr[demote_proc->queue_no])
+    demote_proc->queue_no += 1;
+
+  if (demote_proc->queue_no != 1) {
+    printf("[FAIL] Demote One Time, queue no: %d\n", demote_proc->queue_no);
     return 1;
   }
-  printf("[PASS] Demote One Time");
+  printf("[PASS] Demote One Time queue no: %d\n", demote_proc->queue_no);
+
+  /*----------------------------------------------------------*/
+  /* Promotion Test with Time ()                              */
+  /*----------------------------------------------------------*/
+
+  /* (The process is being removed from queue above and hence there is nothing in queue to promote) */
+
+  uint p_test_ticks = 5;
+  promotionMlfq(mlfq_head, &p_test_ticks);
+  struct proc *demoted_proc = popMlfq(mlfq_head);
+
+  if (!demoted_proc) {
+    printf("[FAIL] Promote One Time, Returned Empty\n");
+    return 1;
+  }
+
+  if (demoted_proc->queue_no != 0) {
+    printf("[FAIL] Promote One Time, queue no: %d\n", demoted_proc->queue_no);
+    return 1;
+  }
+  printf("[PASS] Promote One Time queue no: %d\n", demoted_proc->queue_no);
 
   freeMlfq(mlfq_head);
 

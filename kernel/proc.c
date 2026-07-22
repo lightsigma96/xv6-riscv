@@ -434,6 +434,7 @@ scheduler(void)
   struct cpu *c = mycpu();
 
   c->proc = 0;
+  uint last_promote_time = 0;
   for (;;) {
     // The most recent process to run may have had interrupts
     // turned off; enable them to avoid a deadlock if all
@@ -442,6 +443,11 @@ scheduler(void)
     // and wfi.
     intr_on();
     intr_off();
+
+    acquire(&tickslock);
+    last_promote_time += ticks;
+    promotionMlfq(head, &last_promote_time);
+    release(&tickslock);
 
     uint8 found = 0;
     p = popMlfq(head);
@@ -516,13 +522,8 @@ yield(void)
   p->state = RUNNABLE;
   acquire(&tickslock);
 
-#ifdef TEST_VALUE
-  extern uint test_ticks;
-  if (test_ticks - p->at_tick >= allotment_ms_arr[p->queue_no])
-    p->queue_no += 1;
-#endif
-
-  if (ticks - p->at_tick >= allotment_ms_arr[p->queue_no])
+  if (p->queue_no < MAX_QUEUES - 1 &&
+      ticks - p->at_tick >= allotment_ms_arr[p->queue_no])
     p->queue_no += 1;
 
   insertMlfq(head, p);

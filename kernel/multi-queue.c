@@ -1,7 +1,8 @@
 #include "multi-queue.h"
 #include "defs.h"
 
-uint8 allotment_ms_arr[MAX_QUEUES] = {10, 20, 30, 40, 50};
+uint8 allotment_ms_arr[MAX_QUEUES] = {10, 20, 30, 40};
+#define PROMOTION_TIME_MS allotment_ms_arr[MAX_QUEUES - 1] + 10
 
 void
 allocateMlfq(struct mlfq **__restrict head)
@@ -78,6 +79,37 @@ insertMlfq(struct mlfq *head, struct proc *enter_proc)
   head->queue[enter_proc->queue_no]->tail = node;
   head->queue[enter_proc->queue_no]->tail->back = NULL;
 }
+
+void
+promotionMlfq(struct mlfq *head, uint *ticks)
+{
+#ifdef TEST_V
+#include <stdio.h>
+  printf("\nPromotion Time: %d\n", PROMOTION_TIME_MS);
+#endif
+
+  if (*ticks < PROMOTION_TIME_MS) {
+    return;
+  }
+
+  for (int q = MAX_QUEUES - 1; q >= 1; q--) {
+    while (head->queue[q]->head != NULL) {
+      struct Node *promote_node = head->queue[q]->head;
+
+      if (head->queue[q]->head == head->queue[q]->tail) {
+        head->queue[q]->head = NULL;
+        head->queue[q]->tail = NULL;
+      } else {
+        head->queue[q]->head = head->queue[q]->head->back;
+      }
+
+      promote_node->data->queue_no = 0;
+      insertMlfq(head, promote_node->data);
+      kfree(promote_node);
+    }
+  }
+  *ticks = 0;
+};
 
 void
 freeMlfq(struct mlfq *__restrict head)
